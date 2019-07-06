@@ -364,25 +364,29 @@ create_release_info(State0, Release0, OutputDir) ->
     ReleaseFile = filename:join([ReleaseDir, RelName ++ ".rel"]),
     StartCleanFile = filename:join([ReleaseDir, "start_clean.rel"]),
     NoDotErlFile = filename:join([ReleaseDir, "no_dot_erlang.rel"]),
-    ok = ec_file:mkdir_p(ReleaseDir),
-    Release1 = rlx_release:relfile(Release0, ReleaseFile),
-    State1 = rlx_state:update_realized_release(State0, Release1),
-    case rlx_release:metadata(Release1) of
-        {ok, Meta} ->
-            case {rlx_release:start_clean_metadata(Release1),
-                  rlx_release:no_dot_erlang_metadata(Release1)} of
-                {{ok, StartCleanMeta}, {ok, NoDotErlMeta}} ->
-                    ok = ec_file:write_term(ReleaseFile, Meta),
-                    ok = ec_file:write_term(StartCleanFile, StartCleanMeta),
-                    ok = ec_file:write_term(NoDotErlFile, NoDotErlMeta),
-                    write_bin_file(State1, Release1, OutputDir, ReleaseDir);
-                {{ok, _}, E} ->
-                    E;
-                {_, E} ->
+    case ec_file:mkdir_p(ReleaseDir) of
+        ok ->
+            Release1 = rlx_release:relfile(Release0, ReleaseFile),
+            State1 = rlx_state:update_realized_release(State0, Release1),
+            case rlx_release:metadata(Release1) of
+                {ok, Meta} ->
+                    case {rlx_release:start_clean_metadata(Release1),
+                          rlx_release:no_dot_erlang_metadata(Release1)} of
+                        {{ok, StartCleanMeta}, {ok, NoDotErlMeta}} ->
+                            ok = ec_file:write_term(ReleaseFile, Meta),
+                            ok = ec_file:write_term(StartCleanFile, StartCleanMeta),
+                            ok = ec_file:write_term(NoDotErlFile, NoDotErlMeta),
+                            write_bin_file(State1, Release1, OutputDir, ReleaseDir);
+                        {{ok, _}, E} ->
+                            E;
+                        {_, E} ->
+                            E
+                    end;
+                E ->
                     E
             end;
-        E ->
-            E
+        {error, Err} ->
+            ?RLX_ERROR({create_release_info_error, {ReleaseDir, file:format_error(Err)}})
     end.
 
 write_bin_file(State, Release, OutputDir, RelDir) ->
