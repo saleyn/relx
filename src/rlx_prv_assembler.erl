@@ -138,8 +138,9 @@ format_error({extended_script_hooks_dir_not_found, HooksDir}) ->
     io_lib:format("Cannot find extended script's hooks directory '~s'", [HooksDir]);
 format_error({improperly_named_hook_files, HooksDir, BadFiles}) ->
     io_lib:format("Directory '~s' contains improperly named extended script's hook files:\n  ~p",
-                  [HooksDir, BadFiles]).
-
+                  [HooksDir, BadFiles]);
+format_error({render_failed, Template, Data}) ->
+    io_lib:format("Failed to render template '~w' with data: ~p", [Template, Data]).
 
 %%%===================================================================
 %%% Internal Functions
@@ -967,5 +968,7 @@ render(Template) ->
 render(Template, Data) ->
     Files = rlx_util:template_files(),
     Tpl = rlx_util:load_file(Files, escript, atom_to_list(Template)),
-    {ok, Content} = rlx_util:render(Tpl, Data),
-    Content.
+    case rlx_util:render(Tpl, Data) of
+        {ok, Content}           -> Content;
+        {error, render_failed}  -> ?RLX_ERROR({render_failed, Template, Data})
+    end.
