@@ -133,7 +133,9 @@ format_error({strip_release, Reason}) ->
                   [beam_lib:format_error(Reason)]);
 format_error({rewrite_app_file, AppFile, Error}) ->
     io_lib:format("Unable to rewrite .app file ~s due to ~p",
-                  [AppFile, Error]).
+                  [AppFile, Error]);
+format_error({render_failed, Template, Data}) ->
+    io_lib:format("Failed to render template '~w' with data: ~p", [Template, Data]).
 
 %%%===================================================================
 %%% Internal Functions
@@ -919,5 +921,7 @@ render(Template) ->
 render(Template, Data) ->
     Files = rlx_util:template_files(),
     Tpl = rlx_util:load_file(Files, escript, atom_to_list(Template)),
-    {ok, Content} = rlx_util:render(Tpl, Data),
-    Content.
+    case rlx_util:render(Tpl, Data) of
+        {ok, Content}           -> Content;
+        {error, render_failed}  -> ?RLX_ERROR({render_failed, Template, Data})
+    end.
