@@ -139,8 +139,10 @@ format_error({extended_script_hooks_dir_not_found, HooksDir}) ->
 format_error({improperly_named_hook_files, HooksDir, BadFiles}) ->
     io_lib:format("Directory '~s' contains improperly named extended script's hook files:\n  ~p",
                   [HooksDir, BadFiles]);
-format_error({render_failed, Template, Data}) ->
-    io_lib:format("Failed to render template '~w' with data: ~p", [Template, Data]).
+format_error({render_failed, Template, Tpl, Data}) ->
+    io_lib:format("Failed to render template '~w':\n"
+                  "  Data:    ~1024P\n"
+                  "  Args: ~p\n", [Template, Tpl, 30, Data]).
 
 %%%===================================================================
 %%% Internal Functions
@@ -447,6 +449,8 @@ write_bin_file(State, Release, OutputDir, RelDir) ->
                 unix -> VsnRel;
                 win32 -> rlx_string:concat(VsnRel, ".cmd")
             end,
+            ec_cmd_log:debug(rlx_state:log(State),
+                "Saving '~s' file: ~P\n", [VsnRelStartFile, 10, StartFile]),
             ok = file:write_file(VsnRelStartFile, StartFile),
             ok = file:change_mode(VsnRelStartFile, 8#755),
             BareRelStartFile = case ScriptType of
@@ -970,5 +974,5 @@ render(Template, Data) ->
     Tpl = rlx_util:load_file(Files, escript, atom_to_list(Template)),
     case rlx_util:render(Tpl, Data) of
         {ok, Content}           -> Content;
-        {error, render_failed}  -> ?RLX_ERROR({render_failed, Template, Data})
+        {error, render_failed}  -> throw(?RLX_ERROR({render_failed, Template, Tpl, Data}))
     end.
